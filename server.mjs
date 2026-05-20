@@ -377,6 +377,13 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (url.pathname === "/favicon.ico") {
+      const icon = await fs.readFile(path.join(PUBLIC, "favicon.svg"));
+      res.writeHead(200, { "Content-Type": "image/svg+xml" });
+      res.end(icon);
+      return;
+    }
+
     await serveStatic(url.pathname, res);
   } catch (err) {
     console.error(err);
