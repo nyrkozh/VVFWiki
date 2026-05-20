@@ -3,17 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Раздел — DevWiki</title>
+    <title>Раздел — VVFWiki</title>
     <link rel="stylesheet" href="/css/styles.css" />
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
   </head>
   <body>
     <header class="site-header">
       <div class="container inner">
-        <a href="/" class="logo"><span class="logo-mark">DW</span> DevWiki</a>
+        <a href="/" class="logo"><span class="logo-mark">VVF</span> VVFWiki</a>
         <nav class="nav-links">
           <a href="/">Разделы</a>
-          <a href="/admin.html">Админ</a>
+          <a href="/admin.html">Администратор</a>
         </nav>
       </div>
     </header>
@@ -30,7 +30,7 @@
       <div id="articles" class="article-list"></div>
     </main>
 
-    <footer class="site-footer container">DevWiki</footer>
+    <footer class="site-footer container">VVFWiki</footer>
 
     <script type="module">
       import { api, qs, escapeHtml } from "./js/api.js";
@@ -48,7 +48,7 @@
           document.getElementById("header").innerHTML = "<h1>Раздел не найден</h1>";
           return;
         }
-        document.title = `${section.title} — DevWiki`;
+        document.title = `${section.title} — VVFWiki`;
         document.getElementById("header").innerHTML = `
           <h1>${section.icon} ${escapeHtml(section.title)}</h1>
           <p>${escapeHtml(section.description)}</p>`;

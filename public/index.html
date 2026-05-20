@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>DevWiki — вики для программистов</title>
+    <title>VVFWiki — вики для программистов</title>
     <link rel="stylesheet" href="/css/styles.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
@@ -15,21 +15,38 @@
   <body>
     <header class="site-header">
       <div class="container inner">
-        <a href="/" class="logo"><span class="logo-mark">DW</span> DevWiki</a>
+        <a href="/" class="logo"><span class="logo-mark">VVF</span> VVFWiki</a>
         <nav class="nav-links">
           <a href="/" class="active">Разделы</a>
-          <a href="/admin.html">Админ</a>
+          <a href="/admin.html">Администратор</a>
         </nav>
       </div>
     </header>
 
     <main class="container">
       <section class="hero">
-        <h1>Код и визуализация — рядом</h1>
-        <p>
-          Обучающая вики: фрагмент кода сверху, наглядное объяснение снизу. Разделы создаёт администратор,
-          статьи можно предложить сообществу.
-        </p>
+        <div class="hero-banner">
+          <p class="hero-tag">VVFWiki</p>
+          <h1>Код и объяснение — <span class="hero-accent">вместе</span></h1>
+          <p class="hero-lead">
+            Обучающая вики с визуализацией: код и его работа показаны одновременно.
+          </p>
+          <div class="hero-demo" aria-hidden="true">
+            <div class="hero-demo-code">
+              <span class="hero-demo-line dim">const data = [1, 2, 3];</span>
+              <span class="hero-demo-line">map → <em>[2, 4, 6]</em></span>
+            </div>
+            <div class="hero-demo-viz">
+              <span class="hero-chip">1</span>
+              <span class="hero-chip">2</span>
+              <span class="hero-chip">3</span>
+              <span class="hero-demo-arrow">→</span>
+              <span class="hero-chip active">2</span>
+              <span class="hero-chip active">4</span>
+              <span class="hero-chip active">6</span>
+            </div>
+          </div>
+        </div>
       </section>
       <div id="sections" class="section-grid">
         <p class="empty-state">Загрузка разделов…</p>
@@ -37,7 +54,7 @@
     </main>
 
     <footer class="site-footer container">
-      DevWiki — демо обучающей платформы для разработчиков
+      VVFWiki — обучающая платформа для разработчиков
     </footer>
 
     <script type="module">

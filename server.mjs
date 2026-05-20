@@ -197,6 +197,79 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    const sectionMatch = url.pathname.match(/^\/api\/sections\/([^/]+)$/);
+    if (sectionMatch && req.method === "PATCH") {
+      if (!isAdmin(req)) {
+        json(res, 401, { error: "Требуется вход в админ-панель" });
+        return;
+      }
+      const body = await parseBody(req);
+      const sections = await readJson("sections.json");
+      const idx = sections.findIndex((s) => s.slug === sectionMatch[1] || s.id === sectionMatch[1]);
+      if (idx === -1) {
+        json(res, 404, { error: "Раздел не найден" });
+        return;
+      }
+      const oldSlug = sections[idx].slug;
+      const newSlug =
+        body.slug ||
+        (body.title
+          ? body.title
+              .toLowerCase()
+              .replace(/[^a-z0-9а-яё]+/gi, "-")
+              .replace(/^-|-$/g, "")
+          : oldSlug);
+      if (newSlug !== oldSlug && sections.some((s) => s.slug === newSlug)) {
+        json(res, 409, { error: "Раздел с таким slug уже существует" });
+        return;
+      }
+      sections[idx] = {
+        ...sections[idx],
+        ...(body.title !== undefined && { title: body.title }),
+        ...(body.description !== undefined && { description: body.description }),
+        ...(body.icon !== undefined && { icon: body.icon }),
+        slug: newSlug,
+      };
+      await writeJson("sections.json", sections);
+      if (newSlug !== oldSlug) {
+        const articles = await readJson("articles.json");
+        let changed = false;
+        for (const a of articles) {
+          if (a.sectionSlug === oldSlug) {
+            a.sectionSlug = newSlug;
+            a.updatedAt = new Date().toISOString();
+            changed = true;
+          }
+        }
+        if (changed) await writeJson("articles.json", articles);
+      }
+      json(res, 200, sections[idx]);
+      return;
+    }
+
+    if (sectionMatch && req.method === "DELETE") {
+      if (!isAdmin(req)) {
+        json(res, 401, { error: "Требуется вход в админ-панель" });
+        return;
+      }
+      const sections = await readJson("sections.json");
+      const idx = sections.findIndex((s) => s.slug === sectionMatch[1] || s.id === sectionMatch[1]);
+      if (idx === -1) {
+        json(res, 404, { error: "Раздел не найден" });
+        return;
+      }
+      const removedSlug = sections[idx].slug;
+      sections.splice(idx, 1);
+      await writeJson("sections.json", sections);
+      const articles = await readJson("articles.json");
+      const remaining = articles.filter((a) => a.sectionSlug !== removedSlug);
+      if (remaining.length !== articles.length) {
+        await writeJson("articles.json", remaining);
+      }
+      json(res, 200, { ok: true, deletedSlug: removedSlug });
+      return;
+    }
+
     if (url.pathname === "/api/articles" && req.method === "GET") {
       const status = url.searchParams.get("status");
       if (status === "pending" && !isAdmin(req)) {
@@ -267,12 +340,35 @@ const server = http.createServer(async (req, res) => {
       const articles = await readJson("articles.json");
       const idx = articles.findIndex((a) => a.slug === articleMatch[1] || a.id === articleMatch[1]);
       if (idx === -1) {
-        json(res, 404, { error: "Not found" });
+        json(res, 404, { error: "Статья не найдена" });
         return;
       }
-      articles[idx] = { ...articles[idx], ...body, updatedAt: new Date().toISOString() };
+      const oldSlug = articles[idx].slug;
+      if (body.slug && body.slug !== oldSlug && articles.some((a) => a.slug === body.slug)) {
+        json(res, 409, { error: "Статья с таким slug уже существует" });
+        return;
+      }
+      const { id, createdAt, ...updates } = body;
+      articles[idx] = { ...articles[idx], ...updates, updatedAt: new Date().toISOString() };
       await writeJson("articles.json", articles);
       json(res, 200, articles[idx]);
+      return;
+    }
+
+    if (articleMatch && req.method === "DELETE") {
+      if (!isAdmin(req)) {
+        json(res, 401, { error: "Требуется вход в админ-панель" });
+        return;
+      }
+      const articles = await readJson("articles.json");
+      const idx = articles.findIndex((a) => a.slug === articleMatch[1] || a.id === articleMatch[1]);
+      if (idx === -1) {
+        json(res, 404, { error: "Статья не найдена" });
+        return;
+      }
+      const removed = articles.splice(idx, 1)[0];
+      await writeJson("articles.json", articles);
+      json(res, 200, { ok: true, deletedSlug: removed.slug });
       return;
     }
 
@@ -289,6 +385,6 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`DevWiki → http://localhost:${PORT}`);
-  console.log(`Админ-панель: http://localhost:${PORT}/admin.html`);
+  console.log(`VVFWiki → http://localhost:${PORT}`);
+  console.log(`Администратор: http://localhost:${PORT}/admin.html`);
 });

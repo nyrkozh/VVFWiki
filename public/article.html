@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Статья — DevWiki</title>
+    <title>Статья — VVFWiki</title>
     <link rel="stylesheet" href="/css/styles.css" />
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
   </head>
   <body>
     <header class="site-header">
       <div class="container inner">
-        <a href="/" class="logo"><span class="logo-mark">DW</span> DevWiki</a>
+        <a href="/" class="logo"><span class="logo-mark">VVF</span> VVFWiki</a>
         <nav class="nav-links"><a href="/">Разделы</a></nav>
       </div>
     </header>
@@ -23,7 +23,7 @@
       </div>
     </main>
 
-    <footer class="site-footer container">DevWiki</footer>
+    <footer class="site-footer container">VVFWiki</footer>
 
     <script type="module">
       import { api, qs, escapeHtml, highlightCode } from "./js/api.js";
@@ -42,7 +42,7 @@
           return;
         }
 
-        document.title = `${article.title} — DevWiki`;
+        document.title = `${article.title} — VVFWiki`;
         document.getElementById("meta").innerHTML = `
           <h1>${escapeHtml(article.title)}</h1>
           <p>${escapeHtml(article.summary)}</p>

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Админ — DevWiki</title>
+    <title>Администратор — VVFWiki</title>
     <link rel="stylesheet" href="/css/styles.css" />
     <style>
       .login-wrap {
@@ -25,21 +25,59 @@
       .hidden {
         display: none !important;
       }
+      .row-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        flex-shrink: 0;
+      }
+      .btn-danger {
+        border-color: #f85149;
+        color: #f85149;
+      }
+      .btn-danger:hover {
+        background: #f8514922;
+      }
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: #000a;
+        display: grid;
+        place-items: center;
+        z-index: 200;
+        padding: 1rem;
+      }
+      .modal {
+        width: min(560px, 100%);
+        max-height: 90vh;
+        overflow-y: auto;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1.25rem;
+      }
+      .modal h3 {
+        margin: 0 0 1rem;
+      }
+      .modal-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+      }
     </style>
   </head>
   <body>
     <header class="site-header">
       <div class="container inner">
-        <a href="/" class="logo"><span class="logo-mark">DW</span> DevWiki</a>
+        <a href="/" class="logo"><span class="logo-mark">VVF</span> VVFWiki</a>
         <nav class="nav-links"><a href="/">На сайт</a></nav>
       </div>
     </header>
 
     <main class="container">
-      <!-- Экран входа -->
       <section id="login-screen" class="login-wrap">
         <div class="page-title" style="text-align: center">
-          <h1>Вход в админ-панель</h1>
+          <h1>Вход для администратора</h1>
           <p>Доступ только для администраторов</p>
         </div>
         <form id="login-form" class="form-panel">
@@ -56,7 +94,6 @@
         </form>
       </section>
 
-      <!-- Панель администратора -->
       <section id="admin-panel" class="hidden">
         <div class="admin-bar">
           <span>Вы вошли как <strong id="admin-user"></strong></span>
@@ -64,8 +101,8 @@
         </div>
 
         <div class="page-title">
-          <h1>Админ-панель</h1>
-          <p>Создание разделов и модерация предложенных статей.</p>
+          <h1>Панель администратора</h1>
+          <p>Разделы, статьи, модерация.</p>
         </div>
 
         <div class="admin-grid">
@@ -81,8 +118,9 @@
                 <input id="sec-desc" />
               </div>
               <div class="form-group">
-                <label>Иконка (emoji)</label>
-                <input id="sec-icon" value="📦" maxlength="4" />
+                <label>Иконка</label>
+                <input type="hidden" id="sec-icon" value="📦" />
+                <div id="sec-icon-picker" class="icon-picker-field"></div>
               </div>
               <div class="form-group">
                 <label>Slug (необязательно)</label>
@@ -92,11 +130,10 @@
               <div id="sec-flash"></div>
             </form>
           </section>
-
           <section>
-            <h2 style="font-size: 1.1rem">Опубликовать статью</h2>
+            <h2 style="font-size: 1.1rem">Новая статья</h2>
             <p style="color: var(--text-muted); font-size: 0.9rem">
-              Статья, созданная под вашей сессией, сразу получит статус «опубликовано».
+              Под вашей сессией статья сразу публикуется.
             </p>
             <a href="/submit.html" class="btn">Создать статью</a>
           </section>
@@ -105,28 +142,74 @@
         <h2 style="margin-top: 2rem; font-size: 1.1rem">На модерации</h2>
         <div id="pending" class="article-list"></div>
 
-        <h2 style="margin-top: 2rem; font-size: 1.1rem">Все разделы</h2>
-        <div id="sections-list" class="section-grid"></div>
+        <h2 style="margin-top: 2rem; font-size: 1.1rem">Все статьи</h2>
+        <div id="all-articles" class="article-list"></div>
+
+        <h2 style="margin-top: 2rem; font-size: 1.1rem">Разделы</h2>
+        <div id="sections-list" class="article-list"></div>
       </section>
     </main>
 
+    <div id="modal-root" class="hidden"></div>
+
     <script type="module">
       import { api, escapeHtml, getAdminToken, setAdminToken, clearAdminSession } from "./js/api.js";
+      import { initIconPicker } from "./js/icon-picker.js";
 
       const loginScreen = document.getElementById("login-screen");
       const adminPanel = document.getElementById("admin-panel");
+      const modalRoot = document.getElementById("modal-root");
+      let sectionsCache = [];
 
       function showLogin() {
         loginScreen.classList.remove("hidden");
         adminPanel.classList.add("hidden");
       }
 
+      let sectionIconPicker = null;
+
       function showPanel(login) {
         loginScreen.classList.add("hidden");
         adminPanel.classList.remove("hidden");
         document.getElementById("admin-user").textContent = login;
+        if (!sectionIconPicker) {
+          sectionIconPicker = initIconPicker(
+            document.getElementById("sec-icon-picker"),
+            document.getElementById("sec-icon")
+          );
+        }
+        refreshAll();
+      }
+
+      function refreshAll() {
         loadPending();
+        loadAllArticles();
         loadSections();
+      }
+
+      function closeModal() {
+        modalRoot.classList.add("hidden");
+        modalRoot.innerHTML = "";
+      }
+
+      function openModal(title, bodyHtml, onSave) {
+        modalRoot.innerHTML = `
+          <div class="modal-overlay" data-overlay>
+            <div class="modal" role="dialog">
+              <h3>${escapeHtml(title)}</h3>
+              ${bodyHtml}
+              <div class="modal-actions">
+                <button type="button" class="btn btn-primary" data-save>Сохранить</button>
+                <button type="button" class="btn" data-cancel>Отмена</button>
+              </div>
+            </div>
+          </div>`;
+        modalRoot.classList.remove("hidden");
+        modalRoot.querySelector("[data-cancel]").onclick = closeModal;
+        modalRoot.querySelector("[data-overlay]").onclick = (e) => {
+          if (e.target.dataset.overlay !== undefined) closeModal();
+        };
+        modalRoot.querySelector("[data-save]").onclick = onSave;
       }
 
       async function checkSession() {
@@ -187,6 +270,45 @@
         }
       });
 
+      function articleActions(a, extra = "") {
+        const statusBadge =
+          a.status === "published"
+            ? '<span class="badge badge-published">published</span>'
+            : '<span class="badge badge-pending">pending</span>';
+        return `
+          <div class="article-row">
+            <div>
+              <h3>${escapeHtml(a.title)} ${statusBadge}</h3>
+              <p>${escapeHtml(a.summary)} · ${escapeHtml(a.author)} · ${escapeHtml(a.sectionSlug)}</p>
+              ${extra}
+            </div>
+            <div class="row-actions">
+              <button class="btn btn-sm" data-edit-article="${a.slug}">Редактировать</button>
+              <a class="btn btn-sm" href="/article-preview.html?slug=${encodeURIComponent(a.slug)}">Превью</a>
+              <button class="btn btn-sm btn-danger" data-del-article="${a.slug}">Удалить</button>
+            </div>
+          </div>`;
+      }
+
+      function bindArticleActions(container) {
+        container.querySelectorAll("[data-edit-article]").forEach((btn) => {
+          btn.addEventListener("click", () => editArticle(btn.dataset.editArticle));
+        });
+        container.querySelectorAll("[data-del-article]").forEach((btn) => {
+          btn.addEventListener("click", () => deleteArticle(btn.dataset.delArticle));
+        });
+        container.querySelectorAll("[data-approve]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            try {
+              await api.updateArticle(btn.dataset.approve, { status: "published" });
+              refreshAll();
+            } catch (err) {
+              alert(err.message);
+            }
+          });
+        });
+      }
+
       async function loadPending() {
         const el = document.getElementById("pending");
         try {
@@ -201,45 +323,174 @@
             <div class="article-row">
               <div>
                 <h3>${escapeHtml(a.title)} <span class="badge badge-pending">pending</span></h3>
-                <p>${escapeHtml(a.summary)} · ${escapeHtml(a.author)} · раздел: ${escapeHtml(a.sectionSlug)}</p>
-                <p style="font-size:0.82rem;color:var(--text-muted)">${(a.blocks || []).length} блок(ов) кода</p>
+                <p>${escapeHtml(a.summary)} · ${escapeHtml(a.author)}</p>
               </div>
-              <div style="display:flex;flex-direction:column;gap:0.4rem">
+              <div class="row-actions">
                 <button class="btn btn-sm btn-primary" data-approve="${a.slug}">Одобрить</button>
-                <a class="btn btn-sm" href="/article-preview.html?slug=${a.slug}">Превью</a>
+                <button class="btn btn-sm" data-edit-article="${a.slug}">Редактировать</button>
+                <button class="btn btn-sm btn-danger" data-del-article="${a.slug}">Удалить</button>
               </div>
             </div>`
             )
             .join("");
+          bindArticleActions(el);
+        } catch (err) {
+          el.innerHTML = `<p class="flash flash-error">${escapeHtml(err.message)}</p>`;
+        }
+      }
 
-          el.querySelectorAll("[data-approve]").forEach((btn) => {
-            btn.addEventListener("click", async () => {
-              try {
-                await api.updateArticle(btn.dataset.approve, { status: "published" });
-                loadPending();
-              } catch (err) {
-                alert(err.message);
-              }
-            });
-          });
+      async function loadAllArticles() {
+        const el = document.getElementById("all-articles");
+        try {
+          const list = await api.articles();
+          if (!list.length) {
+            el.innerHTML = '<p class="empty-state">Статей нет</p>';
+            return;
+          }
+          el.innerHTML = list.map((a) => articleActions(a)).join("");
+          bindArticleActions(el);
         } catch (err) {
           el.innerHTML = `<p class="flash flash-error">${escapeHtml(err.message)}</p>`;
         }
       }
 
       async function loadSections() {
-        const sections = await api.sections();
-        document.getElementById("sections-list").innerHTML = sections
+        sectionsCache = await api.sections();
+        const el = document.getElementById("sections-list");
+        if (!sectionsCache.length) {
+          el.innerHTML = '<p class="empty-state">Разделов нет</p>';
+          return;
+        }
+        el.innerHTML = sectionsCache
           .map(
             (s) => `
-          <article class="card">
-            <div class="card-icon">${escapeHtml(s.icon)}</div>
-            <h3>${escapeHtml(s.title)}</h3>
-            <p>${escapeHtml(s.description)}</p>
-            <p style="font-size:0.8rem;color:var(--text-muted)">/${escapeHtml(s.slug)}</p>
-          </article>`
+          <div class="article-row">
+            <div>
+              <h3>${escapeHtml(s.icon)} ${escapeHtml(s.title)}</h3>
+              <p>${escapeHtml(s.description)}</p>
+              <p style="font-size:0.82rem;color:var(--text-muted)">slug: /${escapeHtml(s.slug)}</p>
+            </div>
+            <div class="row-actions">
+              <button class="btn btn-sm" data-edit-section="${s.slug}">Редактировать</button>
+              <button class="btn btn-sm btn-danger" data-del-section="${s.slug}">Удалить</button>
+            </div>
+          </div>`
           )
           .join("");
+
+        el.querySelectorAll("[data-edit-section]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const s = sectionsCache.find((x) => x.slug === btn.dataset.editSection);
+            if (s) editSection(s);
+          });
+        });
+        el.querySelectorAll("[data-del-section]").forEach((btn) => {
+          btn.addEventListener("click", () => deleteSection(btn.dataset.delSection));
+        });
+      }
+
+      function editSection(s) {
+        openModal(
+          "Редактировать раздел",
+          `
+          <div class="form-group"><label>Название</label><input id="m-sec-title" value="${escapeHtml(s.title)}" /></div>
+          <div class="form-group"><label>Описание</label><input id="m-sec-desc" value="${escapeHtml(s.description)}" /></div>
+          <div class="form-group">
+            <label>Иконка</label>
+            <input type="hidden" id="m-sec-icon" value="${escapeHtml(s.icon || "📦")}" />
+            <div id="m-sec-icon-picker" class="icon-picker-field"></div>
+          </div>
+          <div class="form-group"><label>Slug</label><input id="m-sec-slug" value="${escapeHtml(s.slug)}" /></div>
+        `,
+          async () => {
+            try {
+              await api.updateSection(s.slug, {
+                title: document.getElementById("m-sec-title").value.trim(),
+                description: document.getElementById("m-sec-desc").value.trim(),
+                icon: document.getElementById("m-sec-icon").value,
+                slug: document.getElementById("m-sec-slug").value.trim(),
+              });
+              closeModal();
+              refreshAll();
+            } catch (err) {
+              alert(err.message);
+            }
+          }
+        );
+        initIconPicker(
+          document.getElementById("m-sec-icon-picker"),
+          document.getElementById("m-sec-icon")
+        );
+      }
+
+      async function deleteSection(slug) {
+        if (!confirm(`Удалить раздел «${slug}» и все его статьи?`)) return;
+        try {
+          await api.deleteSection(slug);
+          refreshAll();
+        } catch (err) {
+          alert(err.message);
+        }
+      }
+
+      async function editArticle(slug) {
+        const a = await api.article(slug);
+        const sectionOptions = sectionsCache
+          .map(
+            (s) =>
+              `<option value="${escapeHtml(s.slug)}" ${s.slug === a.sectionSlug ? "selected" : ""}>${escapeHtml(s.title)}</option>`
+          )
+          .join("");
+        openModal(
+          "Редактировать статью",
+          `
+          <div class="form-group"><label>Заголовок</label><input id="m-art-title" value="${escapeHtml(a.title)}" /></div>
+          <div class="form-group"><label>Краткое описание</label><input id="m-art-summary" value="${escapeHtml(a.summary)}" /></div>
+          <div class="form-group"><label>Раздел</label><select id="m-art-section">${sectionOptions}</select></div>
+          <div class="form-group"><label>Slug</label><input id="m-art-slug" value="${escapeHtml(a.slug)}" /></div>
+          <div class="form-group"><label>Статус</label>
+            <select id="m-art-status">
+              <option value="published" ${a.status === "published" ? "selected" : ""}>published</option>
+              <option value="pending" ${a.status === "pending" ? "selected" : ""}>pending</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Теги (через запятую)</label><input id="m-art-tags" value="${escapeHtml((a.tags || []).join(", "))}" /></div>
+          <div class="form-group"><label>Блоки (JSON)</label><textarea id="m-art-blocks" rows="12">${escapeHtml(JSON.stringify(a.blocks || [], null, 2))}</textarea></div>
+        `,
+          async () => {
+            try {
+              const blocks = JSON.parse(document.getElementById("m-art-blocks").value);
+              const tags = document
+                .getElementById("m-art-tags")
+                .value.split(",")
+                .map((t) => t.trim())
+                .filter(Boolean);
+              await api.updateArticle(slug, {
+                title: document.getElementById("m-art-title").value.trim(),
+                summary: document.getElementById("m-art-summary").value.trim(),
+                sectionSlug: document.getElementById("m-art-section").value,
+                slug: document.getElementById("m-art-slug").value.trim(),
+                status: document.getElementById("m-art-status").value,
+                tags,
+                blocks,
+              });
+              closeModal();
+              refreshAll();
+            } catch (err) {
+              alert(err.message || "Ошибка JSON в блоках");
+            }
+          }
+        );
+      }
+
+      async function deleteArticle(slug) {
+        if (!confirm(`Удалить статью «${slug}»?`)) return;
+        try {
+          await api.deleteArticle(slug);
+          refreshAll();
+        } catch (err) {
+          alert(err.message);
+        }
       }
 
       checkSession();
