@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Админ — DevWiki</title>
+    <link rel="stylesheet" href="/css/styles.css" />
+    <style>
+      .login-wrap {
+        max-width: 400px;
+        margin: 4rem auto;
+      }
+      .admin-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        margin-bottom: 1.5rem;
+      }
+      .hidden {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container inner">
+        <a href="/" class="logo"><span class="logo-mark">DW</span> DevWiki</a>
+        <nav class="nav-links"><a href="/">На сайт</a></nav>
+      </div>
+    </header>
+
+    <main class="container">
+      <!-- Экран входа -->
+      <section id="login-screen" class="login-wrap">
+        <div class="page-title" style="text-align: center">
+          <h1>Вход в админ-панель</h1>
+          <p>Доступ только для администраторов</p>
+        </div>
+        <form id="login-form" class="form-panel">
+          <div class="form-group">
+            <label>Логин</label>
+            <input id="login" name="login" required autocomplete="username" />
+          </div>
+          <div class="form-group">
+            <label>Пароль</label>
+            <input id="password" type="password" required autocomplete="current-password" />
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%">Войти</button>
+          <div id="login-flash"></div>
+        </form>
+      </section>
+
+      <!-- Панель администратора -->
+      <section id="admin-panel" class="hidden">
+        <div class="admin-bar">
+          <span>Вы вошли как <strong id="admin-user"></strong></span>
+          <button type="button" class="btn btn-sm" id="logout-btn">Выйти</button>
+        </div>
+
+        <div class="page-title">
+          <h1>Админ-панель</h1>
+          <p>Создание разделов и модерация предложенных статей.</p>
+        </div>
+
+        <div class="admin-grid">
+          <section>
+            <h2 style="font-size: 1.1rem">Новый раздел</h2>
+            <form id="section-form" class="form-panel">
+              <div class="form-group">
+                <label>Название</label>
+                <input id="sec-title" required />
+              </div>
+              <div class="form-group">
+                <label>Описание</label>
+                <input id="sec-desc" />
+              </div>
+              <div class="form-group">
+                <label>Иконка (emoji)</label>
+                <input id="sec-icon" value="📦" maxlength="4" />
+              </div>
+              <div class="form-group">
+                <label>Slug (необязательно)</label>
+                <input id="sec-slug" placeholder="auto-from-title" />
+              </div>
+              <button type="submit" class="btn btn-primary">Создать раздел</button>
+              <div id="sec-flash"></div>
+            </form>
+          </section>
+
+          <section>
+            <h2 style="font-size: 1.1rem">Опубликовать статью</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem">
+              Статья, созданная под вашей сессией, сразу получит статус «опубликовано».
+            </p>
+            <a href="/submit.html" class="btn">Создать статью</a>
+          </section>
+        </div>
+
+        <h2 style="margin-top: 2rem; font-size: 1.1rem">На модерации</h2>
+        <div id="pending" class="article-list"></div>
+
+        <h2 style="margin-top: 2rem; font-size: 1.1rem">Все разделы</h2>
+        <div id="sections-list" class="section-grid"></div>
+      </section>
+    </main>
+
+    <script type="module">
+      import { api, escapeHtml, getAdminToken, setAdminToken, clearAdminSession } from "./js/api.js";
+
+      const loginScreen = document.getElementById("login-screen");
+      const adminPanel = document.getElementById("admin-panel");
+
+      function showLogin() {
+        loginScreen.classList.remove("hidden");
+        adminPanel.classList.add("hidden");
+      }
+
+      function showPanel(login) {
+        loginScreen.classList.add("hidden");
+        adminPanel.classList.remove("hidden");
+        document.getElementById("admin-user").textContent = login;
+        loadPending();
+        loadSections();
+      }
+
+      async function checkSession() {
+        if (!getAdminToken()) {
+          showLogin();
+          return;
+        }
+        try {
+          const { login } = await api.me();
+          showPanel(login);
+        } catch {
+          clearAdminSession();
+          showLogin();
+        }
+      }
+
+      document.getElementById("login-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const flash = document.getElementById("login-flash");
+        flash.innerHTML = "";
+        try {
+          const { token, login } = await api.login(
+            document.getElementById("login").value.trim(),
+            document.getElementById("password").value
+          );
+          setAdminToken(token);
+          showPanel(login);
+        } catch (err) {
+          flash.innerHTML = `<p class="flash flash-error">${escapeHtml(err.message)}</p>`;
+        }
+      });
+
+      document.getElementById("logout-btn").addEventListener("click", async () => {
+        try {
+          await api.logout();
+        } catch {
+          /* ignore */
+        }
+        clearAdminSession();
+        showLogin();
+      });
+
+      document.getElementById("section-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const flash = document.getElementById("sec-flash");
+        try {
+          await api.createSection({
+            title: document.getElementById("sec-title").value.trim(),
+            description: document.getElementById("sec-desc").value.trim(),
+            icon: document.getElementById("sec-icon").value.trim() || "📦",
+            slug: document.getElementById("sec-slug").value.trim() || undefined,
+          });
+          flash.innerHTML = '<p class="flash flash-success">Раздел создан</p>';
+          e.target.reset();
+          loadSections();
+        } catch (err) {
+          flash.innerHTML = `<p class="flash flash-error">${escapeHtml(err.message)}</p>`;
+        }
+      });
+
+      async function loadPending() {
+        const el = document.getElementById("pending");
+        try {
+          const list = await api.articles({ status: "pending" });
+          if (!list.length) {
+            el.innerHTML = '<p class="empty-state">Нет статей на модерации</p>';
+            return;
+          }
+          el.innerHTML = list
+            .map(
+              (a) => `
+            <div class="article-row">
+              <div>
+                <h3>${escapeHtml(a.title)} <span class="badge badge-pending">pending</span></h3>
+                <p>${escapeHtml(a.summary)} · ${escapeHtml(a.author)} · раздел: ${escapeHtml(a.sectionSlug)}</p>
+                <p style="font-size:0.82rem;color:var(--text-muted)">${(a.blocks || []).length} блок(ов) кода</p>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:0.4rem">
+                <button class="btn btn-sm btn-primary" data-approve="${a.slug}">Одобрить</button>
+                <a class="btn btn-sm" href="/article-preview.html?slug=${a.slug}">Превью</a>
+              </div>
+            </div>`
+            )
+            .join("");
+
+          el.querySelectorAll("[data-approve]").forEach((btn) => {
+            btn.addEventListener("click", async () => {
+              try {
+                await api.updateArticle(btn.dataset.approve, { status: "published" });
+                loadPending();
+              } catch (err) {
+                alert(err.message);
+              }
+            });
+          });
+        } catch (err) {
+          el.innerHTML = `<p class="flash flash-error">${escapeHtml(err.message)}</p>`;
+        }
+      }
+
+      async function loadSections() {
+        const sections = await api.sections();
+        document.getElementById("sections-list").innerHTML = sections
+          .map(
+            (s) => `
+          <article class="card">
+            <div class="card-icon">${escapeHtml(s.icon)}</div>
+            <h3>${escapeHtml(s.title)}</h3>
+            <p>${escapeHtml(s.description)}</p>
+            <p style="font-size:0.8rem;color:var(--text-muted)">/${escapeHtml(s.slug)}</p>
+          </article>`
+          )
+          .join("");
+      }
+
+      checkSession();
+    </script>
+  </body>
+</html>

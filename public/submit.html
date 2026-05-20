@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Предложить статью — DevWiki</title>
+    <link rel="stylesheet" href="/css/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container inner">
+        <a href="/" class="logo"><span class="logo-mark">DW</span> DevWiki</a>
+      </div>
+    </header>
+
+    <main class="container">
+      <div class="page-title">
+        <h1>Предложить статью</h1>
+        <p id="section-hint">Статья попадёт на модерацию и появится после одобрения админом.</p>
+      </div>
+
+      <form id="form" class="form-panel">
+        <div class="form-group">
+          <label>Раздел</label>
+          <select id="section" required></select>
+        </div>
+        <div class="form-group">
+          <label>Заголовок</label>
+          <input id="title" required placeholder="Например: Array.filter — отбор элементов" />
+        </div>
+        <div class="form-group">
+          <label>Краткое описание</label>
+          <input id="summary" placeholder="Одно предложение о сути" />
+        </div>
+        <div class="form-group">
+          <label>Ваше имя / ник</label>
+          <input id="author" placeholder="Аноним" />
+        </div>
+        <div class="form-group">
+          <label>Теги (через запятую)</label>
+          <input id="tags" placeholder="массивы, ES6" />
+        </div>
+
+        <h3 style="margin:1.5rem 0 0.75rem;font-size:1rem">Блоки: код + визуализация</h3>
+        <div id="blocks"></div>
+        <button type="button" class="btn" id="add-block">+ Добавить блок кода</button>
+
+        <div style="margin-top:1.5rem;display:flex;gap:0.6rem">
+          <button type="submit" class="btn btn-primary">Отправить на модерацию</button>
+          <a id="cancel" href="/" class="btn">Отмена</a>
+        </div>
+        <div id="flash"></div>
+      </form>
+    </main>
+
+    <script type="module">
+      import { api, qs } from "./js/api.js";
+      import { createBlockEditor, collectBlocks } from "./js/editor.js";
+
+      const blocksEl = document.getElementById("blocks");
+      const sectionSelect = document.getElementById("section");
+      const preSlug = qs("section");
+
+      document.getElementById("add-block").addEventListener("click", () => createBlockEditor(blocksEl));
+      createBlockEditor(blocksEl);
+
+      async function loadSections() {
+        const sections = await api.sections();
+        sectionSelect.innerHTML = sections
+          .map((s) => `<option value="${s.slug}">${s.icon} ${s.title}</option>`)
+          .join("");
+        if (preSlug) sectionSelect.value = preSlug;
+        document.getElementById("cancel").href = preSlug
+          ? `/section.html?slug=${preSlug}`
+          : "/";
+      }
+
+      document.getElementById("form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const flash = document.getElementById("flash");
+        flash.innerHTML = "";
+        try {
+          const blocks = collectBlocks(blocksEl);
+          if (!blocks.length) throw new Error("Добавьте хотя бы один блок кода");
+          const tags = document
+            .getElementById("tags")
+            .value.split(",")
+            .map((t) => t.trim())
+            .filter(Boolean);
+          await api.createArticle({
+            sectionSlug: sectionSelect.value,
+            title: document.getElementById("title").value.trim(),
+            summary: document.getElementById("summary").value.trim(),
+            author: document.getElementById("author").value.trim() || "Аноним",
+            tags,
+            blocks,
+            language: blocks[0]?.language || "javascript",
+          });
+          flash.innerHTML =
+            '<p class="flash flash-success">Статья отправлена! После одобрения в админке она появится в разделе.</p>';
+          e.target.reset();
+          blocksEl.innerHTML = "";
+          createBlockEditor(blocksEl);
+        } catch (err) {
+          flash.innerHTML = `<p class="flash flash-error">${err.message}</p>`;
+        }
+      });
+
+      loadSections().catch(() => {
+        document.getElementById("flash").innerHTML =
+          '<p class="flash flash-error">Запустите сервер: node server.mjs</p>';
+      });
+    </script>
+  </body>
+</html>

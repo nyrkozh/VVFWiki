@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Превью — DevWiki</title>
+    <link rel="stylesheet" href="/css/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container inner">
+        <a href="/admin.html" class="logo">← Админ</a>
+      </div>
+    </header>
+    <main class="container">
+      <p class="badge badge-pending">Превью (может быть не опубликовано)</p>
+      <div class="page-title" id="meta"></div>
+      <div id="blocks"></div>
+      <p id="auth-hint" class="flash flash-error hidden">Войдите в <a href="/admin.html">админ-панель</a>, чтобы просматривать черновики.</p>
+    </main>
+    <script type="module">
+      import { api, qs, escapeHtml, highlightCode, getAdminToken } from "./js/api.js";
+      import { renderCodeBlock, renderVisualization } from "./js/visualizations.js";
+
+      window.__devwiki = { highlightCode };
+
+      if (!getAdminToken()) {
+        document.getElementById("auth-hint").classList.remove("hidden");
+      } else {
+        const slug = qs("slug");
+        try {
+          const article = await api.article(slug);
+          document.getElementById("meta").innerHTML = `<h1>${escapeHtml(article.title)}</h1><p>${escapeHtml(article.summary)}</p>`;
+          const blocksEl = document.getElementById("blocks");
+          blocksEl.innerHTML = (article.blocks || []).map((b, i) => renderCodeBlock(b, i)).join("");
+          (article.blocks || []).forEach((block, i) => {
+            const panel = blocksEl.querySelector(`[data-viz-index="${i}"]`);
+            if (panel && block.visualization) renderVisualization(block.visualization, panel);
+          });
+        } catch (err) {
+          document.getElementById("auth-hint").textContent = err.message;
+          document.getElementById("auth-hint").classList.remove("hidden");
+        }
+      }
+    </script>
+  </body>
+</html>

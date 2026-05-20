@@ -1,0 +1,26 @@
+[
+  {
+    "id": "sec-js",
+    "slug": "javascript",
+    "title": "JavaScript",
+    "description": "Язык веба: от основ до паттернов",
+    "icon": "🟨",
+    "createdAt": "2026-05-20T00:00:00.000Z"
+  },
+  {
+    "id": "sec-py",
+    "slug": "python",
+    "title": "Python",
+    "description": "Читаемый синтаксис и стандартная библиотека",
+    "icon": "🐍",
+    "createdAt": "2026-05-20T00:00:00.000Z"
+  },
+  {
+    "id": "sec-react",
+    "slug": "react",
+    "title": "React",
+    "description": "Компоненты, хуки и состояние UI",
+    "icon": "⚛️",
+    "createdAt": "2026-05-20T00:00:00.000Z"
+  }
+]

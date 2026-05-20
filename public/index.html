@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DevWiki — вики для программистов</title>
+    <link rel="stylesheet" href="/css/styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+    <style>
+      body { font-family: var(--font-sans); }
+      pre.code { font-family: var(--font-mono), monospace; }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container inner">
+        <a href="/" class="logo"><span class="logo-mark">DW</span> DevWiki</a>
+        <nav class="nav-links">
+          <a href="/" class="active">Разделы</a>
+          <a href="/admin.html">Админ</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="hero">
+        <h1>Код и визуализация — рядом</h1>
+        <p>
+          Обучающая вики: фрагмент кода сверху, наглядное объяснение снизу. Разделы создаёт администратор,
+          статьи можно предложить сообществу.
+        </p>
+      </section>
+      <div id="sections" class="section-grid">
+        <p class="empty-state">Загрузка разделов…</p>
+      </div>
+    </main>
+
+    <footer class="site-footer container">
+      DevWiki — демо обучающей платформы для разработчиков
+    </footer>
+
+    <script type="module">
+      import { api, escapeHtml } from "./js/api.js";
+
+      async function init() {
+        const el = document.getElementById("sections");
+        try {
+          const sections = await api.sections();
+          if (!sections.length) {
+            el.innerHTML = '<p class="empty-state">Разделов пока нет. Создайте первый в <a href="/admin.html">админке</a>.</p>';
+            return;
+          }
+          const articles = await api.articles({ status: "published" });
+          el.innerHTML = sections
+            .map((s) => {
+              const count = articles.filter((a) => a.sectionSlug === s.slug).length;
+              return `
+                <article class="card">
+                  <a class="card-link" href="/section.html?slug=${encodeURIComponent(s.slug)}">
+                    <div class="card-icon">${escapeHtml(s.icon)}</div>
+                    <h3>${escapeHtml(s.title)}</h3>
+                    <p>${escapeHtml(s.description)}</p>
+                    <p style="margin-top:0.6rem;font-size:0.8rem;color:var(--accent)">${count} статей →</p>
+                  </a>
+                </article>`;
+            })
+            .join("");
+        } catch (e) {
+          el.innerHTML = `<p class="flash flash-error">Не удалось загрузить данные. Запустите сервер: <code>node server.mjs</code></p>`;
+        }
+      }
+      init();
+    </script>
+  </body>
+</html>

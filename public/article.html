@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Статья — DevWiki</title>
+    <link rel="stylesheet" href="/css/styles.css" />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container inner">
+        <a href="/" class="logo"><span class="logo-mark">DW</span> DevWiki</a>
+        <nav class="nav-links"><a href="/">Разделы</a></nav>
+      </div>
+    </header>
+
+    <main class="container">
+      <div class="page-title" id="meta"></div>
+      <div id="blocks"></div>
+      <div class="toolbar">
+        <a id="back" href="/" class="btn">← К разделу</a>
+      </div>
+    </main>
+
+    <footer class="site-footer container">DevWiki</footer>
+
+    <script type="module">
+      import { api, qs, escapeHtml, highlightCode } from "./js/api.js";
+      import { renderCodeBlock, renderVisualization } from "./js/visualizations.js";
+
+      window.__devwiki = { highlightCode };
+
+      const slug = qs("slug");
+      if (!slug) location.href = "/";
+
+      async function init() {
+        const article = await api.article(slug);
+        if (article.status !== "published") {
+          document.getElementById("meta").innerHTML =
+            '<p class="flash flash-error">Статья ещё не опубликована</p>';
+          return;
+        }
+
+        document.title = `${article.title} — DevWiki`;
+        document.getElementById("meta").innerHTML = `
+          <h1>${escapeHtml(article.title)}</h1>
+          <p>${escapeHtml(article.summary)}</p>
+          <p style="font-size:0.85rem;color:var(--text-muted)">
+            ${escapeHtml(article.author)} ·
+            ${(article.tags || []).map((t) => `<span class="badge">${escapeHtml(t)}</span>`).join(" ")}
+          </p>`;
+        document.getElementById("back").href = `/section.html?slug=${encodeURIComponent(article.sectionSlug)}`;
+
+        const blocksEl = document.getElementById("blocks");
+        blocksEl.innerHTML = (article.blocks || []).map((b, i) => renderCodeBlock(b, i)).join("");
+
+        (article.blocks || []).forEach((block, i) => {
+          const panel = blocksEl.querySelector(`[data-viz-index="${i}"]`);
+          if (panel && block.visualization) renderVisualization(block.visualization, panel);
+        });
+      }
+      init().catch(() => {
+        document.getElementById("meta").innerHTML =
+          '<p class="flash flash-error">Запустите сервер: node server.mjs</p>';
+      });
+    </script>
+  </body>
+</html>
