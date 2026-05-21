@@ -56,14 +56,26 @@
 
     <script type="module">
       import { api, qs, formatLoadError } from "./js/api.js";
-      import { createBlockEditor, collectBlocks } from "./js/editor.js";
+      import { createBlockEditor, collectBlocks, defaultLanguageForSection } from "./js/editor.js";
 
       const blocksEl = document.getElementById("blocks");
       const sectionSelect = document.getElementById("section");
       const preSlug = qs("section");
 
-      document.getElementById("add-block").addEventListener("click", () => createBlockEditor(blocksEl));
-      createBlockEditor(blocksEl);
+      function currentSectionLang() {
+        return defaultLanguageForSection(sectionSelect.value);
+      }
+
+      document.getElementById("add-block").addEventListener("click", () =>
+        createBlockEditor(blocksEl, null, currentSectionLang())
+      );
+
+      sectionSelect.addEventListener("change", () => {
+        const lang = currentSectionLang();
+        blocksEl.querySelectorAll('[data-field="language"]').forEach((sel) => {
+          sel.value = lang;
+        });
+      });
 
       async function loadSections() {
         const sections = await api.sections();
@@ -74,6 +86,9 @@
         document.getElementById("cancel").href = preSlug
           ? `/section.html?slug=${preSlug}`
           : "/";
+        if (!blocksEl.querySelector(".block-editor-item")) {
+          createBlockEditor(blocksEl, null, currentSectionLang());
+        }
       }
 
       document.getElementById("form").addEventListener("submit", async (e) => {
@@ -101,7 +116,7 @@
             '<p class="flash flash-success">Статья отправлена! После одобрения в админке она появится в разделе.</p>';
           e.target.reset();
           blocksEl.innerHTML = "";
-          createBlockEditor(blocksEl);
+          createBlockEditor(blocksEl, null, currentSectionLang());
         } catch (err) {
           flash.innerHTML = `<p class="flash flash-error">${err.message}</p>`;
         }

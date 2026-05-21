@@ -111,6 +111,17 @@
             <h2 style="font-size: 1.1rem">Новый раздел</h2>
             <form id="section-form" class="form-panel">
               <div class="form-group">
+                <label>Шаблон раздела</label>
+                <select id="sec-template">
+                  <option value="">Свой раздел</option>
+                  <option value="cpp">C++</option>
+                  <option value="c">C</option>
+                  <option value="javascript">JavaScript</option>
+                  <option value="python">Python</option>
+                  <option value="react">React</option>
+                </select>
+              </div>
+              <div class="form-group">
                 <label>Название</label>
                 <input id="sec-title" required />
               </div>
@@ -156,6 +167,7 @@
     <script type="module">
       import { api, escapeHtml, getAdminToken, setAdminToken, clearAdminSession } from "./js/api.js";
       import { initIconPicker } from "./js/icon-picker.js";
+      import { SECTION_PRESETS } from "./js/section-templates.js";
 
       const loginScreen = document.getElementById("login-screen");
       const adminPanel = document.getElementById("admin-panel");
@@ -251,6 +263,16 @@
         }
         clearAdminSession();
         showLogin();
+      });
+
+      document.getElementById("sec-template").addEventListener("change", (e) => {
+        const preset = SECTION_PRESETS[e.target.value];
+        if (!preset) return;
+        document.getElementById("sec-title").value = preset.title;
+        document.getElementById("sec-desc").value = preset.description;
+        document.getElementById("sec-slug").value = preset.slug;
+        document.getElementById("sec-icon").value = preset.icon;
+        sectionIconPicker?.setValue?.(preset.icon);
       });
 
       document.getElementById("section-form").addEventListener("submit", async (e) => {

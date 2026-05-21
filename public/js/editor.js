@@ -1,4 +1,7 @@
 import { escapeHtml } from "./api.js";
+import { CODE_LANGUAGES, defaultLanguageForSection } from "./section-templates.js";
+
+export { defaultLanguageForSection };
 
 const VIZ_TEMPLATES = {
   array: {
@@ -30,16 +33,21 @@ const VIZ_TEMPLATES = {
 
 let blockCounter = 0;
 
-export function createBlockEditor(container, initial = null) {
+export function createBlockEditor(container, initial = null, defaultLanguage = "javascript") {
   blockCounter++;
   const id = blockCounter;
   const block = initial || {
     title: "",
     code: "",
-    language: "javascript",
+    language: defaultLanguage,
     explanation: "",
     visualization: { ...VIZ_TEMPLATES.array },
   };
+
+  const langOptions = CODE_LANGUAGES.map(
+    (l) =>
+      `<option value="${l.value}" ${block.language === l.value ? "selected" : ""}>${escapeHtml(l.label)}</option>`
+  ).join("");
 
   const div = document.createElement("div");
   div.className = "block-editor-item";
@@ -52,11 +60,7 @@ export function createBlockEditor(container, initial = null) {
     </div>
     <div class="form-group">
       <label>Язык</label>
-      <select data-field="language">
-        <option value="javascript" ${block.language === "javascript" ? "selected" : ""}>JavaScript</option>
-        <option value="python" ${block.language === "python" ? "selected" : ""}>Python</option>
-        <option value="typescript" ${block.language === "typescript" ? "selected" : ""}>TypeScript</option>
-      </select>
+      <select data-field="language">${langOptions}</select>
     </div>
     <div class="form-group">
       <label>Код</label>

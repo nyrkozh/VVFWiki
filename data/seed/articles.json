@@ -103,5 +103,31 @@
         }
       }
     ]
+  },
+  {
+    "id": "art-cpp-hello",
+    "slug": "cpp-hello",
+    "sectionSlug": "cpp",
+    "title": "Hello World на C++",
+    "summary": "Минимальная программа и вывод в консоль.",
+    "language": "cpp",
+    "tags": ["основы", "iostream"],
+    "author": "VVFWiki",
+    "status": "published",
+    "createdAt": "2026-05-20T00:00:00.000Z",
+    "updatedAt": "2026-05-20T00:00:00.000Z",
+    "blocks": [
+      {
+        "id": "b1",
+        "title": "Вывод строки",
+        "code": "#include <iostream>\n\nint main() {\n    std::cout << \"Hello, VVFWiki!\" << std::endl;\n    return 0;\n}",
+        "language": "cpp",
+        "explanation": "std::cout отправляет текст в стандартный поток вывода.",
+        "visualization": {
+          "type": "console",
+          "lines": ["> Hello, VVFWiki!"]
+        }
+      }
+    ]
   }
 ]

@@ -44,12 +44,47 @@ async function ensureDataFiles() {
     }
   }
 
+  await mergeSeedEntries();
+
   const dataPath = path.resolve(DATA);
   console.log(`[data] Рабочие данные: ${dataPath}`);
   if (/OneDrive|Desktop/i.test(dataPath)) {
     console.warn(
       "[data] Папка на Рабочем столе или OneDrive — облачная синхронизация может откатывать изменения. Лучше перенести проект в C:\\Projects\\"
     );
+  }
+}
+
+async function readSeedJson(name) {
+  const raw = await fs.readFile(path.join(SEED, name), "utf-8");
+  return JSON.parse(raw);
+}
+
+/** Добавляет новые разделы/статьи из seed, не трогая уже существующие. */
+async function mergeSeedEntries() {
+  for (const name of RUNTIME_DATA) {
+    let current;
+    let seedList;
+    try {
+      current = await readJson(name);
+      seedList = await readSeedJson(name);
+    } catch {
+      continue;
+    }
+    const key = name === "sections.json" ? "slug" : "slug";
+    const seen = new Set(current.map((item) => item[key]));
+    let added = 0;
+    for (const item of seedList) {
+      if (!seen.has(item[key])) {
+        current.push(item);
+        seen.add(item[key]);
+        added++;
+      }
+    }
+    if (added > 0) {
+      await writeJson(name, current);
+      console.log(`[data] Добавлено из seed в ${name}: ${added}`);
+    }
   }
 }
 

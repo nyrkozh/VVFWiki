@@ -96,6 +96,11 @@ export function highlightCode(code, language) {
       /\b(const|let|var|function|return|if|else|for|while|import|from|export|class|new|this|async|await|useState|useEffect)\b/g,
     python:
       /\b(def|return|if|elif|else|for|while|import|from|class|print|in|and|or|not|True|False|None)\b/g,
+    cpp:
+      /\b(int|void|char|bool|float|double|const|return|if|else|for|while|class|struct|namespace|include|using|std|vector|string|new|delete|public|private|protected|virtual|override|template|typename|auto|nullptr|true|false|size_t)\b/g,
+    c: /\b(int|void|char|float|double|const|return|if|else|for|while|struct|typedef|sizeof|static|include|define|NULL)\b/g,
+    typescript:
+      /\b(const|let|var|function|return|if|else|for|while|import|from|export|class|new|interface|type|extends|implements|async|await|public|private|readonly)\b/g,
   };
 
   const MARKERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -112,6 +117,9 @@ export function highlightCode(code, language) {
   html = html.replace(/(['"`])(?:(?!\1)[^\\]|\\.)*\1/g, (m) => slot("tok-str", m));
 
   if (language === "python") {
+    html = html.replace(/(#.*)$/gm, (m) => slot("tok-com", m));
+  } else if (language === "c") {
+    html = html.replace(/(\/\/.*)$/gm, (m) => slot("tok-com", m));
     html = html.replace(/(#.*)$/gm, (m) => slot("tok-com", m));
   } else {
     html = html.replace(/(\/\/.*)$/gm, (m) => slot("tok-com", m));
