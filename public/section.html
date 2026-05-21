@@ -34,7 +34,7 @@
     <footer class="site-footer container">VVFWiki</footer>
 
     <script type="module">
-      import { api, qs, escapeHtml } from "./js/api.js";
+      import { api, qs, escapeHtml, formatLoadError } from "./js/api.js";
 
       const slug = qs("slug");
       if (!slug) location.href = "/";
@@ -73,9 +73,9 @@
           )
           .join("");
       }
-      init().catch(() => {
+      init().catch((err) => {
         document.getElementById("articles").innerHTML =
-          '<p class="flash flash-error">Запустите сервер: node server.mjs</p>';
+          `<p class="flash flash-error">${formatLoadError(err)}</p>`;
       });
     </script>
   </body>

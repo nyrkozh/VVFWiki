@@ -55,7 +55,7 @@
     </main>
 
     <script type="module">
-      import { api, qs } from "./js/api.js";
+      import { api, qs, formatLoadError } from "./js/api.js";
       import { createBlockEditor, collectBlocks } from "./js/editor.js";
 
       const blocksEl = document.getElementById("blocks");
@@ -107,9 +107,9 @@
         }
       });
 
-      loadSections().catch(() => {
+      loadSections().catch((err) => {
         document.getElementById("flash").innerHTML =
-          '<p class="flash flash-error">Запустите сервер: node server.mjs</p>';
+          `<p class="flash flash-error">${formatLoadError(err)}</p>`;
       });
     </script>
   </body>

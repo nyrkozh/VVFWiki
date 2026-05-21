@@ -1,4 +1,34 @@
-const API_BASE = window.location.origin;
+const DEFAULT_API = "http://localhost:3847";
+
+/** Адрес API: тот же хост при node server.mjs, иначе localhost:3847 (Live Server, file://). */
+export function getApiBase() {
+  const meta = document.querySelector('meta[name="api-base"]')?.content?.trim();
+  if (meta) return meta.replace(/\/$/, "");
+  if (location.protocol === "file:") return DEFAULT_API;
+  if (location.port === "3847") return location.origin;
+  if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+    return DEFAULT_API;
+  }
+  return location.origin;
+}
+
+export function formatLoadError(err) {
+  if (location.hostname.endsWith("github.io")) {
+    return 'С GitHub Pages API не работает. Локально: <code>node server.mjs</code> → <a href="http://localhost:3847">http://localhost:3847</a>';
+  }
+  if (location.protocol === "file:") {
+    return 'Не открывайте HTML-файл напрямую. Запустите <code>node server.mjs</code> и откройте <a href="http://localhost:3847">http://localhost:3847</a>';
+  }
+  const msg = err?.message || String(err);
+  if (msg === "Failed to fetch" || err?.name === "TypeError") {
+    const base = getApiBase();
+    return `Сервер не отвечает. В папке проекта: <code>node server.mjs</code>, затем <a href="${base}">${base}</a>`;
+  }
+  if (/not found|не найден/i.test(msg)) {
+    return `${escapeHtml(msg)}. <a href="/">На главную</a>`;
+  }
+  return escapeHtml(msg);
+}
 
 export function getAdminToken() {
   return localStorage.getItem("devwiki_session") || "";
@@ -18,7 +48,7 @@ async function request(path, options = {}) {
   const token = getAdminToken();
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  const res = await fetch(`${getApiBase()}${path}`, { ...options, headers });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || res.statusText);
   return data;

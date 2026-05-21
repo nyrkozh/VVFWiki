@@ -59,7 +59,7 @@
     </footer>
 
     <script type="module">
-      import { api, escapeHtml } from "./js/api.js";
+      import { api, escapeHtml, formatLoadError } from "./js/api.js";
 
       async function init() {
         const el = document.getElementById("sections");
@@ -85,7 +85,7 @@
             })
             .join("");
         } catch (e) {
-          el.innerHTML = `<p class="flash flash-error">Не удалось загрузить данные. Запустите сервер: <code>node server.mjs</code></p>`;
+          el.innerHTML = `<p class="flash flash-error">${formatLoadError(e)}</p>`;
         }
       }
       init();
