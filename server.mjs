@@ -7,6 +7,9 @@ import { scryptSync, timingSafeEqual, randomBytes } from "crypto";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(__dirname, "public");
 const DATA = path.join(__dirname, "data");
+const SEED = path.join(DATA, "seed");
+const BACKUPS = path.join(DATA, "backups");
+const RUNTIME_DATA = ["sections.json", "articles.json"];
 const PORT = process.env.PORT || 3847;
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -21,13 +24,64 @@ const MIME = {
   ".ico": "image/x-icon",
 };
 
+async function ensureDataFiles() {
+  await fs.mkdir(SEED, { recursive: true });
+  await fs.mkdir(BACKUPS, { recursive: true });
+
+  for (const name of RUNTIME_DATA) {
+    const dest = path.join(DATA, name);
+    const seedFile = path.join(SEED, name);
+    try {
+      await fs.access(dest);
+    } catch {
+      try {
+        await fs.copyFile(seedFile, dest);
+        console.log(`[data] Создан ${name} из шаблона seed/`);
+      } catch {
+        await fs.writeFile(dest, "[]\n", "utf-8");
+        console.log(`[data] Создан пустой ${name}`);
+      }
+    }
+  }
+
+  const dataPath = path.resolve(DATA);
+  console.log(`[data] Рабочие данные: ${dataPath}`);
+  if (/OneDrive|Desktop/i.test(dataPath)) {
+    console.warn(
+      "[data] Папка на Рабочем столе или OneDrive — облачная синхронизация может откатывать изменения. Лучше перенести проект в C:\\Projects\\"
+    );
+  }
+}
+
 async function readJson(name) {
   const raw = await fs.readFile(path.join(DATA, name), "utf-8");
   return JSON.parse(raw);
 }
 
 async function writeJson(name, data) {
-  await fs.writeFile(path.join(DATA, name), JSON.stringify(data, null, 2), "utf-8");
+  if (!RUNTIME_DATA.includes(name)) {
+    await fs.writeFile(path.join(DATA, name), JSON.stringify(data, null, 2), "utf-8");
+    return;
+  }
+
+  const filePath = path.join(DATA, name);
+  const tmpPath = `${filePath}.tmp`;
+  const content = JSON.stringify(data, null, 2);
+
+  await fs.writeFile(tmpPath, content, "utf-8");
+  await fs.rename(tmpPath, filePath);
+
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const backupPath = path.join(BACKUPS, `${name}.${stamp}.bak`);
+  await fs.copyFile(filePath, backupPath).catch(() => {});
+
+  const backups = (await fs.readdir(BACKUPS))
+    .filter((f) => f.startsWith(name))
+    .sort()
+    .reverse();
+  for (const old of backups.slice(8)) {
+    await fs.unlink(path.join(BACKUPS, old)).catch(() => {});
+  }
 }
 
 function verifyPassword(password, stored) {
@@ -390,6 +444,8 @@ const server = http.createServer(async (req, res) => {
     json(res, 500, { error: "Internal error" });
   }
 });
+
+await ensureDataFiles();
 
 server.listen(PORT, () => {
   console.log(`VVFWiki → http://localhost:${PORT}`);

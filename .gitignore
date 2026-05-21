@@ -3,3 +3,9 @@ node_modules/
 *.log
 .DS_Store
 Thumbs.db
+
+# Рабочие данные сайта (не перезаписывать при git pull / деплое)
+data/sections.json
+data/articles.json
+data/backups/
+data/*.tmp
