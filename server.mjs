@@ -461,6 +461,12 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (url.pathname === "/ping" && req.method === "GET") {
+      res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
+      res.end("OK");
+      return;
+    }
+
     if (url.pathname === "/api/health") {
       json(res, 200, { ok: true });
       return;
